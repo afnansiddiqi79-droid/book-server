@@ -1,26 +1,29 @@
 import { betterAuth } from "better-auth";
+import { MongoClient } from "mongodb";
+import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { bearer, jwt } from "better-auth/plugins";
-import { mongoAdapter } from "@better-auth/mongo-adapter";
+
+const client = new MongoClient(process.env.DB_URL);
+const db = client.db(process.env.DB_NAME);
 
 export const auth = betterAuth({
-  database: mongoAdapter({
-    uri: process.env.DB_URL,
-    databaseName: process.env.DB_NAME,
-  }),
+  database: mongodbAdapter(db, { client }),
+trustedOrigins: [
+  "http://localhost:3000",
+],
   emailAndPassword: {
     enabled: true,
   },
+
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     },
   },
+
   plugins: [
-    // Allows the frontend to send `Authorization: Bearer <token>` and have
-    // Better Auth treat it as the session token.
     bearer({ requireSignature: true }),
-    // Issues and verifies signed JWTs for sessions (used by the Express API).
     jwt({
       jwt: {
         issuer: process.env.JWT_ISSUER ?? "booknook",

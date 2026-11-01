@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
-
+import "dotenv/config";
 const jwksUrl = new URL(
   `${process.env.BETTER_AUTH_URL ?? "http://localhost:5000"}/api/auth/jwks`
 );
