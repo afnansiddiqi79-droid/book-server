@@ -28,9 +28,9 @@ borrowsRouter.post("/", requireAuth, async (req, res, next) => {
     }
 
     const existing = await borrows.findOne({
-      userEmail: req.userEmail,
-      bookId: book._id,
       status: "borrowed",
+      $or: [{ userId: req.userId }, { userEmail: req.userEmail }],
+      bookId: book._id,
     });
     if (existing) {
       return res.status(409).json({ message: "You have already borrowed this book" });
@@ -42,7 +42,7 @@ borrowsRouter.post("/", requireAuth, async (req, res, next) => {
       { returnDocument: "after" }
     );
 
-    if (!updatedBook.value) {
+    if (!updatedBook) {
       return res.status(409).json({ message: "No copies of this book are available" });
     }
 
@@ -50,8 +50,9 @@ borrowsRouter.post("/", requireAuth, async (req, res, next) => {
       bookId: book._id,
       bookTitle: book.title,
       bookImage: book.image,
+      userId: req.userId,
       userEmail: req.userEmail,
-      userName: req.body.userName ?? req.userEmail ?? "Unknown",
+      userName: req.userName ?? req.userEmail ?? "Unknown",
       borrowDate: new Date(),
       returnDate: null,
       returnedAt: null,
@@ -72,7 +73,9 @@ borrowsRouter.get("/", requireAuth, async (req, res, next) => {
     const db = getDB();
     const borrows = await db
       .collection(COLLECTION)
-      .find({ userEmail: req.userEmail })
+      .find({
+        $or: [{ userId: req.userId }, { userEmail: req.userEmail }],
+      })
       .sort({ createdAt: -1 })
       .toArray();
     return res.json(borrows);
@@ -93,7 +96,10 @@ borrowsRouter.delete("/:id", requireAuth, async (req, res, next) => {
     if (!borrow) {
       return res.status(404).json({ message: "Borrow not found" });
     }
-    if (borrow.userEmail !== req.userEmail) {
+    const isOwner = borrow.userId
+      ? String(borrow.userId) === String(req.userId)
+      : borrow.userEmail === req.userEmail;
+    if (!isOwner) {
       return res.status(403).json({ message: "Not allowed" });
     }
     if (borrow.status !== "borrowed") {
@@ -102,12 +108,12 @@ borrowsRouter.delete("/:id", requireAuth, async (req, res, next) => {
 
     const returnedAt = new Date();
     const updatedBorrow = await borrows.findOneAndUpdate(
-      { _id: new ObjectId(req.params.id) },
+      { _id: new ObjectId(req.params.id), status: "borrowed" },
       { $set: { status: "returned", returnDate: returnedAt, returnedAt } },
       { returnDocument: "after" }
     );
 
-    if (updatedBorrow.value) {
+    if (updatedBorrow) {
       await db
         .collection("books")
         .updateOne(
@@ -116,7 +122,7 @@ borrowsRouter.delete("/:id", requireAuth, async (req, res, next) => {
         );
     }
 
-    return res.json(updatedBorrow.value);
+    return res.json(updatedBorrow);
   } catch (err) {
     return next(err);
   }

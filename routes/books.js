@@ -59,15 +59,15 @@ booksRouter.post("/", requireAuth, async (req, res, next) => {
     const db = getDB();
     const books = db.collection(COLLECTION);
     const result = await books.insertOne({
-      title,
-      author,
+      title: title.trim(),
+      author: author.trim(),
       category,
       image: image ?? "",
       description: description ?? "",
       totalCopies: copies,
       availableCopies: copies,
       addedBy: req.userId,
-      addedByName: req.body.userName ?? req.userEmail ?? "Unknown",
+      addedByName: req.userName ?? req.userEmail ?? "Unknown",
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -97,7 +97,17 @@ booksRouter.patch("/:id", requireAuth, async (req, res, next) => {
 
     const updated = await books.findOneAndUpdate(
       { _id: new ObjectId(req.params.id) },
-      { $set: { ...req.body, updatedAt: new Date() } },
+      {
+        $set: {
+          title: String(req.body.title ?? existing.title).trim(),
+          author: String(req.body.author ?? existing.author).trim(),
+          category: String(req.body.category ?? existing.category),
+          image: typeof req.body.image === "string" ? req.body.image : existing.image,
+          description: typeof req.body.description === "string" ? req.body.description : existing.description,
+          totalCopies: Number(req.body.totalCopies ?? existing.totalCopies),
+          updatedAt: new Date(),
+        },
+      },
       { returnDocument: "after" }
     );
 

@@ -20,7 +20,11 @@ uploadRouter.post("/", async (req, res, next) => {
       }
     );
 
-    const uploadData = await uploadResponse.json();
+    if (!uploadResponse.ok) {
+    return res.status(502).json({ message: "Image upload failed" });
+  }
+
+  const uploadData = await uploadResponse.json();
 
     if (!uploadData?.success || !uploadData?.data?.url) {
       return res.status(502).json({ message: "Image upload failed" });

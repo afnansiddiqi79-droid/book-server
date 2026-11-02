@@ -24,6 +24,7 @@ export async function requireAuth(req, res, next) {
     // The user id is taken from the verified token subject.
     req.userId = payload.sub;
     req.userEmail = payload.email ?? null;
+    req.userName = payload.name ?? payload.email ?? null;
 
     next();
   } catch (err) {
