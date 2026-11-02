@@ -10,7 +10,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 
 import { booksRouter } from "./routes/books.js";
 import { borrowsRouter } from "./routes/borrows.js";
-import { uploadRouter } from "./routes/upload.js";
+import uploadRouter from "./routes/upload.js";
 
 async function main() {
   await connectDB();
