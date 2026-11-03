@@ -1,3 +1,4 @@
+
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
@@ -12,38 +13,49 @@ import { booksRouter } from "./routes/books.js";
 import { borrowsRouter } from "./routes/borrows.js";
 import uploadRouter from "./routes/upload.js";
 
-async function main() {
-  await connectDB();
+const app = express();
 
-  const app = express();
+app.use(
+  cors({
+    origin:
+      process.env.CLIENT_URL ?? "http://localhost:3000",
+    credentials: true,
+  })
+);
+
+app.get("/health", (req, res) => {
+  res.json({ ok: true });
+});
+
+// Better Auth
+app.all("/api/auth/{*any}", toNodeHandler(auth));
+
+app.use(express.json());
+
+// Connect MongoDB before database routes
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// API Routes
+app.use("/api/books", booksRouter);
+app.use("/api/borrows", borrowsRouter);
+app.use("/api/upload", uploadRouter);
+
+app.use(errorHandler);
+
+// Local development only
+if (!process.env.VERCEL) {
   const port = process.env.PORT || 5000;
 
-  app.use(cors({
-    origin: process.env.CLIENT_URL ?? "http://localhost:3000",
-    credentials: true,
-  }));
-
-  app.get("/health", (req, res) => {
-    res.json({ ok: true });
-  });
-
-  // Better Auth MUST come before express.json()
-  app.all("/api/auth/{*any}", toNodeHandler(auth));
-
-  app.use(express.json());
-
-  app.use("/api/books", booksRouter);
-  app.use("/api/borrows", borrowsRouter);
-  app.use("/api/upload", uploadRouter);
-
-  app.use(errorHandler);
-
   app.listen(port, () => {
-    console.log(`BookNook API listening on port ${port}`);
+    console.log(`BookNook API running on port ${port}`);
   });
 }
 
-main().catch((err) => {
-  console.error("Failed to start server:", err);
-  process.exit(1);
-});
+export default app;
