@@ -6,6 +6,14 @@ import { bearer, jwt } from "better-auth/plugins";
 const client = new MongoClient(process.env.DB_URL);
 const db = client.db(process.env.DB_NAME);
 
+// SameSite=None is required so the browser sends the session cookie on
+// cross-origin fetch requests (frontend and backend are on different Vercel
+// subdomains). SameSite=None mandates Secure=true, which Better Auth sets
+// automatically when baseURL is HTTPS (sets the __Secure- cookie prefix).
+// In local development over HTTP, SameSite=Lax is kept because Secure cookies
+// do not work over http://localhost.
+const isSecureOrigin = process.env.BETTER_AUTH_URL?.startsWith("https://") ?? false;
+
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
 
@@ -38,4 +46,10 @@ export const auth = betterAuth({
       },
     }),
   ],
+
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: isSecureOrigin ? "none" : "lax",
+    },
+  },
 });
