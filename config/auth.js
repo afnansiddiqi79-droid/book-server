@@ -12,7 +12,12 @@ const db = client.db(process.env.DB_NAME);
 // automatically when baseURL is HTTPS (sets the __Secure- cookie prefix).
 // In local development over HTTP, SameSite=Lax is kept because Secure cookies
 // do not work over http://localhost.
-const isSecureOrigin = process.env.BETTER_AUTH_URL?.startsWith("https://") ?? false;
+// On Vercel, the app is always served over HTTPS (VERCEL=1). Use that signal
+// in addition to BETTER_AUTH_URL so SameSite=None is applied even when
+// BETTER_AUTH_URL is not explicitly set in the environment.
+const isProduction = process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+const betterAuthUrl = process.env.BETTER_AUTH_URL ?? "";
+const isSecureOrigin = isProduction || betterAuthUrl.startsWith("https://");
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
